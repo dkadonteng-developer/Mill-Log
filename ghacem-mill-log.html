@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GHACEM — Milling Daily Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#1D1D1B;
+    --ink-soft:#5B5F5E;
+    --paper:#F0F2F0;
+    --panel:#FFFFFF;
+    --line:#DADEDA;
+    --line-strong:#BFC5C1;
+    --orange:#009D57;
+    --orange-dark:#00773F;
+    --steel:#2E5B47;
+    --night:#1D3A2C;
+    --morn:#4E8F6C;
+    --aft:#009D57;
+    --danger:#B23A2E;
+    --danger-bg:#F7E4E0;
+    --success:#00773F;
+    --success-bg:#E1F2E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:960px;margin:0 auto;padding:0 20px 80px;}
+
+  /* ---- Top bar ---- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 0 16px;
+    border-bottom:2px solid var(--ink);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;
+    flex-shrink:0;
+  }
+  .brand-text h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em;}
+  .brand-text p{margin:2px 0 0;font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;}
+  .nav{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;padding:3px;}
+  .nav button{
+    border:none;background:transparent;padding:9px 16px;font-size:13px;font-weight:500;
+    font-family:'IBM Plex Sans',sans-serif;color:var(--ink-soft);border-radius:6px;cursor:pointer;
+  }
+  .nav button.active{background:var(--ink);color:#fff;}
+
+  /* ---- Shift period signature strip ---- */
+  .period-strip{display:flex;height:34px;border-radius:6px;overflow:hidden;margin:18px 0;border:1px solid var(--line-strong);}
+  .period-strip div{flex:1;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#fff;letter-spacing:.03em;}
+  .p-night{background:var(--night);}
+  .p-morn{background:var(--morn);color:var(--ink);}
+  .p-aft{background:var(--aft);}
+
+  h2.section-title{
+    font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-soft);
+    margin:28px 0 10px;font-weight:600;
+  }
+
+  /* ---- Panel / card ---- */
+  .panel{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:20px 22px;margin-bottom:16px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr;} .topbar{flex-direction:column;align-items:flex-start;gap:14px;} .nav{width:100%;} .nav button{flex:1;}}
+
+  label{display:block;font-size:11.5px;color:var(--ink-soft);margin-bottom:5px;font-weight:500;letter-spacing:.02em;}
+  input,select,textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--line-strong);border-radius:6px;
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--ink);background:#fff;
+  }
+  select{font-family:'IBM Plex Sans',sans-serif;}
+  textarea{font-family:'IBM Plex Sans',sans-serif;resize:vertical;min-height:44px;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(224,89,30,.12);}
+  .field{margin-bottom:14px;}
+
+  /* ---- Stoppage rows ---- */
+  .stop-row{
+    border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:10px;position:relative;background:#FBFAF7;
+  }
+  .stop-row .grid5{display:grid;grid-template-columns:1fr 1fr 0.8fr 1.6fr 1.6fr auto;gap:10px;align-items:end;}
+  @media(max-width:800px){.stop-row .grid5{grid-template-columns:1fr 1fr;}}
+  .remove-btn{
+    background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:18px;line-height:1;padding:8px;
+  }
+  .remove-btn:hover{color:var(--danger);}
+  .add-row-btn{
+    width:100%;padding:11px;border:1.5px dashed var(--line-strong);border-radius:8px;background:none;
+    color:var(--ink-soft);font-size:13px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;
+  }
+  .add-row-btn:hover{border-color:var(--orange);color:var(--orange-dark);}
+
+  .btn-primary{
+    background:var(--orange);color:#fff;border:none;padding:12px 22px;border-radius:7px;
+    font-size:14px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;letter-spacing:.01em;
+  }
+  .btn-primary:hover{background:var(--orange-dark);}
+  .btn-secondary{
+    background:none;border:1px solid var(--line-strong);color:var(--ink);padding:11px 18px;border-radius:7px;
+    font-size:13.5px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;
+  }
+  .btn-secondary:hover{border-color:var(--ink);}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:12px 20px;border-radius:8px;font-size:13.5px;
+    display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:50;
+  }
+
+  /* ---- Admin ---- */
+  .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  @media(max-width:640px){.stat-row{grid-template-columns:1fr 1fr;}}
+  .stat-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:14px 16px;}
+  .stat-card .num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;}
+  .stat-card .lbl{font-size:11px;color:var(--ink-soft);margin-top:3px;letter-spacing:.02em;}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .filters select,.filters input{width:auto;min-width:140px;}
+
+  .log-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .log-head{
+    padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px;flex-wrap:wrap;
+  }
+  .log-head:hover{background:#FAF8F3;}
+  .log-head-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:4px 9px;border-radius:20px;font-weight:600;letter-spacing:.02em;
+  }
+  .badge-night{background:var(--night);color:#fff;}
+  .badge-morn{background:var(--morn);color:var(--ink);}
+  .badge-aft{background:var(--aft);color:#fff;}
+  .log-head .mill{font-weight:600;font-size:14px;}
+  .log-head .date{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);}
+  .downtime-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px;
+    background:var(--danger-bg);color:var(--danger);
+  }
+  .downtime-pill.zero{background:var(--success-bg);color:var(--success);}
+  .chev{color:var(--ink-soft);transition:transform .15s;}
+  .log-body{border-top:1px solid var(--line);padding:0 18px 16px;display:none;}
+  .log-body.open{display:block;}
+  table.stops{width:100%;border-collapse:collapse;margin-top:12px;font-size:12.5px;}
+  table.stops th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);
+    padding:8px 8px;border-bottom:1px solid var(--line);font-weight:600;
+  }
+  table.stops td{padding:9px 8px;border-bottom:1px solid var(--line);font-family:'IBM Plex Mono',monospace;vertical-align:top;}
+  table.stops td.reason,table.stops td.action{font-family:'IBM Plex Sans',sans-serif;}
+  .meta-line{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-soft);}
+  .meta-line b{color:var(--ink);font-weight:600;}
+
+  .empty-state{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+  .empty-state i{font-size:30px;display:block;margin-bottom:10px;opacity:.5;}
+
+  .del-btn{background:none;border:1px solid var(--line-strong);color:var(--danger);padding:6px 10px;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+  .del-btn:hover{background:var(--danger-bg);border-color:var(--danger);}
+
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:-4px;margin-bottom:14px;}
+  .doc-strip{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:6px;letter-spacing:.02em;flex-wrap:wrap;gap:6px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">GH</div>
+      <div class="brand-text">
+        <h1>MILLING DEPARTMENT DAILY LOG</h1>
+        <p>GHACEM LIMITED, TEMA</p>
+      </div>
+    </div>
+    <div class="nav">
+      <button id="navEntry" class="active" onclick="switchView('entry')">New log entry</button>
+      <button id="navAdmin" onclick="switchView('admin')">Admin view</button>
+    </div>
+  </div>
+
+  <div class="period-strip">
+    <div class="p-night">22:00 – 06:00</div>
+    <div class="p-morn">06:00 – 14:00</div>
+    <div class="p-aft">14:00 – 22:00</div>
+  </div>
+
+  <!-- ============ ENTRY VIEW ============ -->
+  <div id="entryView">
+
+    <div class="panel">
+      <div class="grid3">
+        <div class="field">
+          <label for="millNo">Mill no.</label>
+          <input id="millNo" type="text" placeholder="e.g. Mill II">
+        </div>
+        <div class="field">
+          <label for="period">Period</label>
+          <select id="period">
+            <option value="22:00 - 06:00">22:00 – 06:00</option>
+            <option value="06:00 - 14:00">06:00 – 14:00</option>
+            <option value="14:00 - 22:00">14:00 – 22:00</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="shift">Shift</label>
+          <input id="shift" type="text" placeholder="e.g. A">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="recordedDate">Recorded date</label>
+          <input id="recordedDate" type="date">
+        </div>
+        <div class="field">
+          <label for="supervisor">Supervisor signature (name)</label>
+          <input id="supervisor" type="text" placeholder="Full name">
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Stoppages</h2>
+    <div class="hint">Log every stop during this shift. Total downtime is calculated automatically.</div>
+
+    <div id="stopRows"></div>
+    <button class="add-row-btn" onclick="addStopRow()">+ Add stoppage</button>
+
+    <div class="panel" style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+      <div>
+        <label style="margin-bottom:2px;">Total downtime (hrs)</label>
+        <div id="totalDowntimeDisplay" style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;">0.0</div>
+      </div>
+      <button class="btn-primary" onclick="submitLog()">Save log entry</button>
+    </div>
+
+  </div>
+
+  <!-- ============ ADMIN VIEW ============ -->
+  <div id="adminView" style="display:none;">
+
+    <div id="adminLock" class="panel" style="max-width:380px;margin:40px auto;text-align:center;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:10px;font-weight:600;">Admin access</div>
+      <p style="font-size:13px;color:var(--ink-soft);margin:0 0 16px;">Enter the admin password to view submitted logs.</p>
+      <input id="adminPassword" type="password" placeholder="Password" style="margin-bottom:10px;" onkeydown="if(event.key==='Enter')checkAdminPassword()">
+      <button class="btn-primary" style="width:100%;" onclick="checkAdminPassword()">Unlock admin view</button>
+      <div id="adminError" style="color:var(--danger);font-size:12px;margin-top:10px;display:none;">Incorrect password.</div>
+    </div>
+
+    <div id="adminContent" style="display:none;">
+    <div class="stat-row" id="statRow"></div>
+
+    <div class="filters">
+      <select id="filterMill" onchange="renderAdmin()"><option value="">All mills</option></select>
+      <select id="filterPeriod" onchange="renderAdmin()">
+        <option value="">All periods</option>
+        <option value="22:00 - 06:00">22:00 – 06:00</option>
+        <option value="06:00 - 14:00">06:00 – 14:00</option>
+        <option value="14:00 - 22:00">14:00 – 22:00</option>
+      </select>
+      <input id="filterDate" type="date" onchange="renderAdmin()">
+      <button class="btn-secondary" onclick="clearFilters()">Clear filters</button>
+    </div>
+
+    <div id="logList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+let stopIdCounter = 0;
+let allLogs = [];
+let openLogIds = new Set();
+
+function periodClass(period){
+  if(period.startsWith('22')) return 'night';
+  if(period.startsWith('06')) return 'morn';
+  return 'aft';
+}
+function periodLabel(period){
+  return period.replace(' - ',' – ');
+}
+
+function addStopRow(prefill){
+  const id = 'row' + (stopIdCounter++);
+  const wrap = document.createElement('div');
+  wrap.className = 'stop-row';
+  wrap.id = id;
+  wrap.innerHTML = `
+    <div class="grid5">
+      <div class="field" style="margin-bottom:0;">
+        <label>Time stopped</label>
+        <input type="time" class="f-timeStopped" value="${prefill?.timeStopped||''}">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Time started</label>
+        <input type="time" class="f-timeStarted" value="${prefill?.timeStarted||''}" oninput="recalcTotal()">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>D.time hrs</label>
+        <input type="text" class="f-dtime" readonly value="0.0" style="background:#F1EFE8;">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Reason for stop</label>
+        <input type="text" class="f-reason" placeholder="e.g. Belt slip" value="${prefill?.reason||''}">
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Action taken</label>
+        <input type="text" class="f-action" placeholder="e.g. Realigned belt" value="${prefill?.action||''}">
+      </div>
+      <button class="remove-btn" onclick="removeStopRow('${id}')" aria-label="Remove stoppage">×</button>
+    </div>
+  `;
+  document.getElementById('stopRows').appendChild(wrap);
+  wrap.querySelector('.f-timeStopped').addEventListener('input', recalcTotal);
+  recalcTotal();
+}
+
+function removeStopRow(id){
+  document.getElementById(id).remove();
+  recalcTotal();
+}
+
+function computeDtime(stopTime, startTime){
+  if(!stopTime || !startTime) return 0;
+  const [sh,sm] = stopTime.split(':').map(Number);
+  const [eh,em] = startTime.split(':').map(Number);
+  let mins = (eh*60+em) - (sh*60+sm);
+  if(mins < 0) mins += 24*60;
+  return mins/60;
+}
+
+function recalcTotal(){
+  let total = 0;
+  document.querySelectorAll('.stop-row').forEach(row=>{
+    const stopT = row.querySelector('.f-timeStopped').value;
+    const startT = row.querySelector('.f-timeStarted').value;
+    const d = computeDtime(stopT, startT);
+    row.querySelector('.f-dtime').value = d.toFixed(1);
+    total += d;
+  });
+  document.getElementById('totalDowntimeDisplay').textContent = total.toFixed(1);
+}
+
+function showToast(msg, icon){
+  const host = document.getElementById('toastHost');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  host.appendChild(t);
+  setTimeout(()=>t.remove(), 2600);
+}
+
+async function submitLog(){
+  const mill = document.getElementById('millNo').value.trim();
+  const period = document.getElementById('period').value;
+  const shift = document.getElementById('shift').value.trim();
+  const recordedDate = document.getElementById('recordedDate').value;
+  const supervisor = document.getElementById('supervisor').value.trim();
+
+  if(!mill || !recordedDate){
+    showToast('Enter mill no. and recorded date before saving.');
+    return;
+  }
+
+  const stops = [];
+  document.querySelectorAll('.stop-row').forEach(row=>{
+    const timeStopped = row.querySelector('.f-timeStopped').value;
+    const timeStarted = row.querySelector('.f-timeStarted').value;
+    const reason = row.querySelector('.f-reason').value.trim();
+    const action = row.querySelector('.f-action').value.trim();
+    if(timeStopped || timeStarted || reason || action){
+      stops.push({
+        timeStopped, timeStarted,
+        dtime: computeDtime(timeStopped, timeStarted),
+        reason, action
+      });
+    }
+  });
+
+  const totalDowntime = stops.reduce((s,r)=>s+r.dtime,0);
+
+  const entry = {
+    id: 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    mill, period, shift, recordedDate, supervisor,
+    stops, totalDowntime,
+    createdAt: new Date().toISOString()
+  };
+
+  try{
+    const result = await window.storage.set('log:' + entry.id, JSON.stringify(entry), true);
+    if(!result){
+      showToast('Could not save. Try again.');
+      return;
+    }
+    showToast('Log entry saved for ' + mill + ' — ' + periodLabel(period));
+    resetForm();
+  }catch(e){
+    showToast('Storage error — could not save entry.');
+    console.error(e);
+  }
+}
+
+function resetForm(){
+  document.getElementById('millNo').value = '';
+  document.getElementById('shift').value = '';
+  document.getElementById('supervisor').value = '';
+  document.getElementById('stopRows').innerHTML = '';
+  document.getElementById('totalDowntimeDisplay').textContent = '0.0';
+  addStopRow();
+}
+
+const ADMIN_PASSWORD = 'ghacem2026';
+let adminUnlocked = false;
+
+function switchView(view){
+  document.getElementById('entryView').style.display = view==='entry' ? '' : 'none';
+  document.getElementById('adminView').style.display = view==='admin' ? '' : 'none';
+  document.getElementById('navEntry').classList.toggle('active', view==='entry');
+  document.getElementById('navAdmin').classList.toggle('active', view==='admin');
+  if(view==='admin'){
+    if(adminUnlocked){
+      loadLogs();
+    }else{
+      document.getElementById('adminLock').style.display = '';
+      document.getElementById('adminContent').style.display = 'none';
+      document.getElementById('adminPassword').value = '';
+      document.getElementById('adminError').style.display = 'none';
+      setTimeout(()=>document.getElementById('adminPassword').focus(), 50);
+    }
+  }
+}
+
+function checkAdminPassword(){
+  const entered = document.getElementById('adminPassword').value;
+  if(entered === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    document.getElementById('adminLock').style.display = 'none';
+    document.getElementById('adminContent').style.display = '';
+    loadLogs();
+  }else{
+    document.getElementById('adminError').style.display = '';
+  }
+}
+
+async function loadLogs(){
+  document.getElementById('logList').innerHTML = '<div class="empty-state">Loading log entries…</div>';
+  try{
+    const listResult = await window.storage.list('log:', true);
+    const keys = listResult ? listResult.keys : [];
+    const logs = [];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, true);
+        if(r) logs.push(JSON.parse(r.value));
+      }catch(e){}
+    }
+    logs.sort((a,b)=> (b.recordedDate||'').localeCompare(a.recordedDate||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+    allLogs = logs;
+    populateMillFilter();
+    renderAdmin();
+  }catch(e){
+    document.getElementById('logList').innerHTML = '<div class="empty-state">Could not load log entries.</div>';
+    console.error(e);
+  }
+}
+
+function populateMillFilter(){
+  const sel = document.getElementById('filterMill');
+  const current = sel.value;
+  const mills = [...new Set(allLogs.map(l=>l.mill))].sort();
+  sel.innerHTML = '<option value="">All mills</option>' + mills.map(m=>`<option value="${m}">${m}</option>`).join('');
+  sel.value = current;
+}
+
+function clearFilters(){
+  document.getElementById('filterMill').value = '';
+  document.getElementById('filterPeriod').value = '';
+  document.getElementById('filterDate').value = '';
+  renderAdmin();
+}
+
+function renderAdmin(){
+  const millF = document.getElementById('filterMill').value;
+  const periodF = document.getElementById('filterPeriod').value;
+  const dateF = document.getElementById('filterDate').value;
+
+  const filtered = allLogs.filter(l=>{
+    if(millF && l.mill !== millF) return false;
+    if(periodF && l.period !== periodF) return false;
+    if(dateF && l.recordedDate !== dateF) return false;
+    return true;
+  });
+
+  const totalDowntime = filtered.reduce((s,l)=>s+(l.totalDowntime||0),0);
+  const totalStops = filtered.reduce((s,l)=>s+(l.stops?l.stops.length:0),0);
+  const millsCount = new Set(filtered.map(l=>l.mill)).size;
+
+  document.getElementById('statRow').innerHTML = `
+    <div class="stat-card"><div class="num">${filtered.length}</div><div class="lbl">Log entries</div></div>
+    <div class="stat-card"><div class="num">${totalDowntime.toFixed(1)}</div><div class="lbl">Total downtime hrs</div></div>
+    <div class="stat-card"><div class="num">${totalStops}</div><div class="lbl">Recorded stoppages</div></div>
+    <div class="stat-card"><div class="num">${millsCount}</div><div class="lbl">Mills reporting</div></div>
+  `;
+
+  const list = document.getElementById('logList');
+  if(filtered.length === 0){
+    list.innerHTML = '<div class="empty-state"><i class="ti">—</i>No log entries match these filters.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(l=>{
+    const cls = periodClass(l.period);
+    const isOpen = openLogIds.has(l.id);
+    const downtimeClass = l.totalDowntime > 0 ? '' : 'zero';
+    const stopsRows = (l.stops||[]).map(s=>`
+      <tr>
+        <td>${s.timeStopped||'—'}</td>
+        <td>${s.timeStarted||'—'}</td>
+        <td>${s.dtime.toFixed(1)}</td>
+        <td class="reason">${escapeHtml(s.reason)||'—'}</td>
+        <td class="action">${escapeHtml(s.action)||'—'}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="font-family:\'IBM Plex Sans\',sans-serif;color:var(--ink-soft);">No stoppages recorded — mill ran without interruption.</td></tr>';
+
+    return `
+      <div class="log-card">
+        <div class="log-head" onclick="toggleLog('${l.id}')">
+          <div class="log-head-left">
+            <span class="badge badge-${cls}">${periodLabel(l.period)}</span>
+            <span class="mill">${escapeHtml(l.mill)}</span>
+            <span class="date">${l.recordedDate||'—'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="downtime-pill ${downtimeClass}">${l.totalDowntime.toFixed(1)} hrs down</span>
+            <span class="chev">${isOpen?'▲':'▼'}</span>
+          </div>
+        </div>
+        <div class="log-body ${isOpen?'open':''}" id="body-${l.id}">
+          <div class="meta-line">
+            <span>Shift: <b>${escapeHtml(l.shift)||'—'}</b></span>
+            <span>Supervisor: <b>${escapeHtml(l.supervisor)||'—'}</b></span>
+          </div>
+          <table class="stops">
+            <thead><tr><th>Stopped</th><th>Started</th><th>Hrs</th><th>Reason</th><th>Action taken</th></tr></thead>
+            <tbody>${stopsRows}</tbody>
+          </table>
+          <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+            <button class="del-btn" onclick="deleteLog(event,'${l.id}')">Delete entry</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleLog(id){
+  if(openLogIds.has(id)) openLogIds.delete(id);
+  else openLogIds.add(id);
+  renderAdmin();
+}
+
+async function deleteLog(evt, id){
+  evt.stopPropagation();
+  if(!confirm('Delete this log entry? This cannot be undone.')) return;
+  try{
+    await window.storage.delete('log:' + id, true);
+    allLogs = allLogs.filter(l=>l.id!==id);
+    populateMillFilter();
+    renderAdmin();
+    showToast('Log entry deleted.');
+  }catch(e){
+    showToast('Could not delete entry.');
+  }
+}
+
+function escapeHtml(str){
+  if(!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+document.getElementById('recordedDate').valueAsDate = new Date();
+addStopRow();
+</script>
+</body>
+</html>
