@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GHACEM — Milling Daily Log</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -169,6 +172,103 @@
 
   .hint{font-size:11.5px;color:var(--ink-soft);margin-top:-4px;margin-bottom:14px;}
   .doc-strip{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin-top:6px;letter-spacing:.02em;flex-wrap:wrap;gap:6px;}
+
+  /* ---- Admin bar / sub-nav / logout ---- */
+  .admin-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+  .subnav{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;padding:3px;}
+  .subnav button{
+    border:none;background:transparent;padding:8px 14px;font-size:12.5px;font-weight:500;
+    font-family:'IBM Plex Sans',sans-serif;color:var(--ink-soft);border-radius:6px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+  }
+  .subnav button.active{background:var(--steel);color:#fff;}
+  .subnav .count{font-family:'IBM Plex Mono',monospace;font-size:10.5px;opacity:.85;}
+  .logout-btn{
+    background:none;border:1px solid var(--line-strong);color:var(--ink-soft);padding:9px 14px;border-radius:7px;
+    font-size:12.5px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;
+    display:flex;align-items:center;gap:6px;
+  }
+  .logout-btn:hover{border-color:var(--danger);color:var(--danger);background:var(--danger-bg);}
+
+  /* ---- Charts ---- */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px;}
+  @media(max-width:800px){.chart-grid{grid-template-columns:1fr;}}
+  .chart-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:16px 18px 10px;}
+  .chart-card h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);font-weight:600;}
+  .chart-card .chart-wrap{position:relative;height:230px;}
+  .chart-card.wide{grid-column:1 / -1;}
+  .chart-card .chart-wrap.short{height:190px;}
+  .chart-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--ink-soft);font-size:12.5px;}
+  .chart-host{width:100%;height:100%;}
+  .chart-host svg{width:100%;height:100%;display:block;overflow:visible;}
+  .chart-host .bar-label{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--ink-soft);}
+  .chart-host .bar-value{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;fill:var(--ink);}
+  .chart-host .axis-line{stroke:var(--line);stroke-width:1;}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:center;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+  .chart-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .chart-legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  /* ---- Selection + export toolbar ---- */
+  .toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;padding:10px 14px;background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;}
+  .toolbar-left{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft);}
+  .toolbar-left label{margin:0;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);}
+  .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn-export{
+    background:var(--panel);border:1px solid var(--line-strong);color:var(--ink);padding:8px 14px;border-radius:7px;
+    font-size:12.5px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;display:flex;align-items:center;gap:6px;
+  }
+  .btn-export:hover{border-color:var(--steel);color:var(--steel);}
+  .btn-export:disabled{opacity:.45;cursor:not-allowed;}
+  .row-check{width:16px;height:16px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;}
+
+  /* ---- Recycle bin ---- */
+  .trash-card{background:var(--panel);border:1px solid var(--line-strong);border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;opacity:.9;}
+  .trash-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .trash-meta{font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+  .trash-actions{display:flex;gap:8px;}
+  .restore-btn{background:none;border:1px solid var(--line-strong);color:var(--success);padding:6px 12px;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+  .restore-btn:hover{background:var(--success-bg);border-color:var(--success);}
+  .purge-btn{background:none;border:1px solid var(--line-strong);color:var(--danger);padding:6px 12px;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;}
+  .purge-btn:hover{background:var(--danger-bg);border-color:var(--danger);}
+
+  /* ================= MOBILE OPTIMIZATION ================= */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  @media(max-width:520px){
+    .app{padding:0 12px 70px;}
+    .topbar{padding:16px 0 12px;}
+    .brand-mark{width:34px;height:34px;font-size:12px;}
+    .brand-text h1{font-size:14px;}
+    .brand-text p{font-size:10.5px;}
+    .period-strip{height:auto;flex-direction:column;}
+    .period-strip div{padding:7px 0;font-size:10.5px;}
+    .panel{padding:16px 14px;}
+    .stop-row{padding:12px 12px;}
+    .stat-row{grid-template-columns:1fr 1fr;gap:8px;}
+    .stat-card{padding:11px 12px;}
+    .stat-card .num{font-size:18px;}
+    .admin-bar{flex-direction:column;align-items:stretch;gap:10px;}
+    .subnav{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .subnav button{flex-shrink:0;padding:8px 12px;font-size:12px;}
+    .logout-btn{width:100%;justify-content:center;}
+    .chart-grid{gap:10px;}
+    .chart-card{padding:14px 12px 8px;}
+    .chart-card .chart-wrap{height:190px;}
+    .chart-card .chart-wrap.short{height:170px;}
+    .filters{flex-direction:column;align-items:stretch;}
+    .filters select,.filters input{width:100%;min-width:0;}
+    .toolbar{flex-direction:column;align-items:stretch;}
+    .toolbar-actions{flex-direction:column;}
+    .btn-export{width:100%;justify-content:center;}
+    .log-head{padding:12px 14px;}
+    .log-head-left{gap:8px;}
+    .log-head .mill{font-size:13px;}
+    .downtime-pill{font-size:11px;}
+    table.stops{min-width:520px;}
+    .trash-card{flex-direction:column;align-items:stretch;}
+    .trash-actions{justify-content:stretch;}
+    .trash-actions button{flex:1;}
+    .btn-primary,.btn-secondary{width:100%;}
+  }
 </style>
 </head>
 <body>
@@ -201,7 +301,14 @@
       <div class="grid3">
         <div class="field">
           <label for="millNo">Mill no.</label>
-          <input id="millNo" type="text" placeholder="e.g. Mill II">
+          <select id="millNo">
+            <option value="">Select mill</option>
+            <option value="Mill 1">Mill 1</option>
+            <option value="Mill 2">Mill 2</option>
+            <option value="Mill 3">Mill 3</option>
+            <option value="Mill 4">Mill 4</option>
+            <option value="Mill 5">Mill 5</option>
+          </select>
         </div>
         <div class="field">
           <label for="period">Period</label>
@@ -213,7 +320,12 @@
         </div>
         <div class="field">
           <label for="shift">Shift</label>
-          <input id="shift" type="text" placeholder="e.g. A">
+          <select id="shift">
+            <option value="">Select shift</option>
+            <option value="Morning Shift">Morning Shift</option>
+            <option value="Afternoon Shift">Afternoon Shift</option>
+            <option value="Evening Shift">Evening Shift</option>
+          </select>
         </div>
       </div>
       <div class="grid2">
@@ -256,21 +368,78 @@
     </div>
 
     <div id="adminContent" style="display:none;">
-    <div class="stat-row" id="statRow"></div>
 
-    <div class="filters">
-      <select id="filterMill" onchange="renderAdmin()"><option value="">All mills</option></select>
-      <select id="filterPeriod" onchange="renderAdmin()">
-        <option value="">All periods</option>
-        <option value="22:00 - 06:00">22:00 – 06:00</option>
-        <option value="06:00 - 14:00">06:00 – 14:00</option>
-        <option value="14:00 - 22:00">14:00 – 22:00</option>
-      </select>
-      <input id="filterDate" type="date" onchange="renderAdmin()">
-      <button class="btn-secondary" onclick="clearFilters()">Clear filters</button>
+    <div class="admin-bar">
+      <div class="subnav">
+        <button id="subOverview" class="active" onclick="switchAdminSub('overview')">Overview</button>
+        <button id="subLogs" onclick="switchAdminSub('logs')">Log entries</button>
+        <button id="subTrash" onclick="switchAdminSub('trash')">Recycle bin <span class="count" id="trashCount"></span></button>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">⏻ Log out</button>
     </div>
 
-    <div id="logList"></div>
+    <div class="stat-row" id="statRow"></div>
+
+    <!-- Overview: dynamic charts -->
+    <div id="subviewOverview">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Downtime by mill (hrs)</h3>
+          <div class="chart-wrap"><div id="chartByMill" class="chart-host"></div></div>
+        </div>
+        <div class="chart-card">
+          <h3>Downtime share by period</h3>
+          <div class="chart-wrap"><div id="chartByPeriod" class="chart-host"></div></div>
+        </div>
+        <div class="chart-card wide">
+          <h3>Downtime trend by recorded date</h3>
+          <div class="chart-wrap"><div id="chartTrend" class="chart-host"></div></div>
+        </div>
+        <div class="chart-card">
+          <h3>Top stoppage reasons (count)</h3>
+          <div class="chart-wrap short"><div id="chartReasons" class="chart-host"></div></div>
+        </div>
+        <div class="chart-card">
+          <h3>Log entries by shift</h3>
+          <div class="chart-wrap short"><div id="chartShift" class="chart-host"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log entries: filters, selection, export -->
+    <div id="subviewLogs" style="display:none;">
+      <div class="filters">
+        <select id="filterMill" onchange="renderAdmin()"><option value="">All mills</option></select>
+        <select id="filterPeriod" onchange="renderAdmin()">
+          <option value="">All periods</option>
+          <option value="22:00 - 06:00">22:00 – 06:00</option>
+          <option value="06:00 - 14:00">06:00 – 14:00</option>
+          <option value="14:00 - 22:00">14:00 – 22:00</option>
+        </select>
+        <input id="filterDate" type="date" onchange="renderAdmin()">
+        <button class="btn-secondary" onclick="clearFilters()">Clear filters</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <label><input type="checkbox" class="row-check" id="selectAllBox" onchange="toggleSelectAll(this.checked)"> Select all shown</label>
+          <span id="selectionSummary">0 selected</span>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn-export" id="exportExcelBtn" onclick="exportRecords('excel')">⬇ Export Excel</button>
+          <button class="btn-export" id="exportPdfBtn" onclick="exportRecords('pdf')">⬇ Export PDF</button>
+        </div>
+      </div>
+
+      <div id="logList"></div>
+    </div>
+
+    <!-- Recycle bin -->
+    <div id="subviewTrash" style="display:none;">
+      <div class="hint">Deleted log entries are kept here until permanently removed. Restore a record to return it to the active log list.</div>
+      <div id="trashList"></div>
+    </div>
+
     </div>
 
   </div>
@@ -283,6 +452,111 @@
 let stopIdCounter = 0;
 let allLogs = [];
 let openLogIds = new Set();
+let selectedLogIds = new Set();
+let allTrash = [];
+let adminSub = 'overview';
+
+/* ---- Storage wrapper ----
+   Uses the native window.storage bridge when it's available (e.g. running as a
+   live Claude artifact). If that bridge is missing or a call throws — which
+   happens when this file is opened directly, hosted on GitHub Pages, or
+   previewed somewhere without the bridge — everything falls back to the
+   browser's own localStorage so the app still works. Note: the localStorage
+   fallback is per-browser/per-device only; it will not sync log entries
+   between different computers viewing the page. */
+const LS_PREFIX = 'ghacemMillLog:';
+let storageMode = null; // 'bridge' | 'local', set on first successful call
+
+function lsFullKey(key, shared){
+  return LS_PREFIX + (shared ? 'shared:' : 'local:') + key;
+}
+
+const Store = {
+  async get(key, shared){
+    if(typeof window.storage !== 'undefined' && window.storage){
+      try{
+        const r = await window.storage.get(key, shared);
+        storageMode = 'bridge';
+        return r;
+      }catch(e){ /* fall through to localStorage */ }
+    }
+    storageMode = storageMode || 'local';
+    const raw = localStorage.getItem(lsFullKey(key, shared));
+    if(raw === null) return null;
+    return { key, value: raw, shared: !!shared };
+  },
+  async set(key, value, shared){
+    if(typeof window.storage !== 'undefined' && window.storage){
+      try{
+        const r = await window.storage.set(key, value, shared);
+        if(r){ storageMode = 'bridge'; return r; }
+      }catch(e){ /* fall through to localStorage */ }
+    }
+    try{
+      localStorage.setItem(lsFullKey(key, shared), value);
+      storageMode = storageMode || 'local';
+      return { key, value, shared: !!shared };
+    }catch(e){
+      console.error('Local storage write failed', e);
+      return null;
+    }
+  },
+  async delete(key, shared){
+    if(typeof window.storage !== 'undefined' && window.storage){
+      try{
+        const r = await window.storage.delete(key, shared);
+        storageMode = 'bridge';
+        return r;
+      }catch(e){ /* fall through to localStorage */ }
+    }
+    localStorage.removeItem(lsFullKey(key, shared));
+    storageMode = storageMode || 'local';
+    return { key, deleted:true, shared: !!shared };
+  },
+  async list(prefix, shared){
+    if(typeof window.storage !== 'undefined' && window.storage){
+      try{
+        const r = await window.storage.list(prefix, shared);
+        storageMode = 'bridge';
+        return r;
+      }catch(e){ /* fall through to localStorage */ }
+    }
+    storageMode = storageMode || 'local';
+    const fullPrefix = LS_PREFIX + (shared ? 'shared:' : 'local:') + (prefix||'');
+    const keys = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(fullPrefix)){
+        keys.push(k.slice((LS_PREFIX + (shared?'shared:':'local:')).length));
+      }
+    }
+    return { keys, prefix, shared: !!shared };
+  }
+};
+
+function maybeShowStorageModeBanner(){
+  if(storageMode === 'local'){
+    showToast('Running in local browser storage — entries stay on this device only.');
+  }
+}
+
+/* ---- Client-side cache (stale-while-revalidate) ----
+   Speeds up opening the admin view: the last-known logs/trash are painted
+   immediately from a local cache while a fresh copy is fetched in the
+   background, then the view quietly updates once the real data arrives. */
+const CACHE_KEY_LOGS = 'ghacemMillLog:cache:logs';
+const CACHE_KEY_TRASH = 'ghacemMillLog:cache:trash';
+
+function readCache(key){
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+function writeCache(key, data){
+  try{ localStorage.setItem(key, JSON.stringify(data)); }catch(e){ /* quota or unavailable — safe to ignore */ }
+}
 
 function periodClass(period){
   if(period.startsWith('22')) return 'night';
@@ -400,7 +674,7 @@ async function submitLog(){
   };
 
   try{
-    const result = await window.storage.set('log:' + entry.id, JSON.stringify(entry), true);
+    const result = await Store.set('log:' + entry.id, JSON.stringify(entry), true);
     if(!result){
       showToast('Could not save. Try again.');
       return;
@@ -455,24 +729,63 @@ function checkAdminPassword(){
   }
 }
 
+function adminLogout(){
+  adminUnlocked = false;
+  selectedLogIds.clear();
+  openLogIds.clear();
+  adminSub = 'overview';
+  switchAdminSub('overview');
+  switchView('entry');
+  showToast('Logged out of admin view.');
+}
+
+function switchAdminSub(view){
+  adminSub = view;
+  document.getElementById('subviewOverview').style.display = view==='overview' ? '' : 'none';
+  document.getElementById('subviewLogs').style.display = view==='logs' ? '' : 'none';
+  document.getElementById('subviewTrash').style.display = view==='trash' ? '' : 'none';
+  document.getElementById('subOverview').classList.toggle('active', view==='overview');
+  document.getElementById('subLogs').classList.toggle('active', view==='logs');
+  document.getElementById('subTrash').classList.toggle('active', view==='trash');
+  if(view==='overview') renderCharts();
+  if(view==='trash') renderTrash();
+}
+
 async function loadLogs(){
-  document.getElementById('logList').innerHTML = '<div class="empty-state">Loading log entries…</div>';
+  // Paint instantly from cache while the fresh fetch runs in the background —
+  // makes the admin view feel instant instead of waiting on every open.
+  const cached = readCache(CACHE_KEY_LOGS);
+  if(cached && cached.length){
+    allLogs = cached;
+    populateMillFilter();
+    renderAdmin();
+    if(adminSub==='overview') renderCharts();
+  }else{
+    document.getElementById('logList').innerHTML = '<div class="empty-state">Loading log entries…</div>';
+  }
   try{
-    const listResult = await window.storage.list('log:', true);
+    const listResult = await Store.list('log:', true);
     const keys = listResult ? listResult.keys : [];
     const logs = [];
     for(const k of keys){
       try{
-        const r = await window.storage.get(k, true);
+        const r = await Store.get(k, true);
         if(r) logs.push(JSON.parse(r.value));
       }catch(e){}
     }
     logs.sort((a,b)=> (b.recordedDate||'').localeCompare(a.recordedDate||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
     allLogs = logs;
+    writeCache(CACHE_KEY_LOGS, logs);
+    const validIds = new Set(logs.map(l=>l.id));
+    [...selectedLogIds].forEach(id=>{ if(!validIds.has(id)) selectedLogIds.delete(id); });
     populateMillFilter();
     renderAdmin();
+    await loadTrash();
+    if(adminSub==='overview') renderCharts();
   }catch(e){
-    document.getElementById('logList').innerHTML = '<div class="empty-state">Could not load log entries.</div>';
+    if(!cached || !cached.length){
+      document.getElementById('logList').innerHTML = '<div class="empty-state">Could not load log entries.</div>';
+    }
     console.error(e);
   }
 }
@@ -492,17 +805,20 @@ function clearFilters(){
   renderAdmin();
 }
 
-function renderAdmin(){
+function getFilteredLogs(){
   const millF = document.getElementById('filterMill').value;
   const periodF = document.getElementById('filterPeriod').value;
   const dateF = document.getElementById('filterDate').value;
-
-  const filtered = allLogs.filter(l=>{
+  return allLogs.filter(l=>{
     if(millF && l.mill !== millF) return false;
     if(periodF && l.period !== periodF) return false;
     if(dateF && l.recordedDate !== dateF) return false;
     return true;
   });
+}
+
+function renderAdmin(){
+  const filtered = getFilteredLogs();
 
   const totalDowntime = filtered.reduce((s,l)=>s+(l.totalDowntime||0),0);
   const totalStops = filtered.reduce((s,l)=>s+(l.stops?l.stops.length:0),0);
@@ -515,6 +831,12 @@ function renderAdmin(){
     <div class="stat-card"><div class="num">${millsCount}</div><div class="lbl">Mills reporting</div></div>
   `;
 
+  updateSelectionSummary();
+  const selectAllBox = document.getElementById('selectAllBox');
+  if(selectAllBox){
+    selectAllBox.checked = filtered.length>0 && filtered.every(l=>selectedLogIds.has(l.id));
+  }
+
   const list = document.getElementById('logList');
   if(filtered.length === 0){
     list.innerHTML = '<div class="empty-state"><i class="ti">—</i>No log entries match these filters.</div>';
@@ -524,6 +846,7 @@ function renderAdmin(){
   list.innerHTML = filtered.map(l=>{
     const cls = periodClass(l.period);
     const isOpen = openLogIds.has(l.id);
+    const isChecked = selectedLogIds.has(l.id);
     const downtimeClass = l.totalDowntime > 0 ? '' : 'zero';
     const stopsRows = (l.stops||[]).map(s=>`
       <tr>
@@ -539,6 +862,7 @@ function renderAdmin(){
       <div class="log-card">
         <div class="log-head" onclick="toggleLog('${l.id}')">
           <div class="log-head-left">
+            <input type="checkbox" class="row-check" ${isChecked?'checked':''} onclick="event.stopPropagation()" onchange="toggleSelectLog('${l.id}', this.checked)">
             <span class="badge badge-${cls}">${periodLabel(l.period)}</span>
             <span class="mill">${escapeHtml(l.mill)}</span>
             <span class="date">${l.recordedDate||'—'}</span>
@@ -553,10 +877,12 @@ function renderAdmin(){
             <span>Shift: <b>${escapeHtml(l.shift)||'—'}</b></span>
             <span>Supervisor: <b>${escapeHtml(l.supervisor)||'—'}</b></span>
           </div>
+          <div class="table-scroll">
           <table class="stops">
             <thead><tr><th>Stopped</th><th>Started</th><th>Hrs</th><th>Reason</th><th>Action taken</th></tr></thead>
             <tbody>${stopsRows}</tbody>
           </table>
+          </div>
           <div style="margin-top:12px;display:flex;justify-content:flex-end;">
             <button class="del-btn" onclick="deleteLog(event,'${l.id}')">Delete entry</button>
           </div>
@@ -572,17 +898,347 @@ function toggleLog(id){
   renderAdmin();
 }
 
+function toggleSelectLog(id, checked){
+  if(checked) selectedLogIds.add(id);
+  else selectedLogIds.delete(id);
+  updateSelectionSummary();
+  const selectAllBox = document.getElementById('selectAllBox');
+  if(selectAllBox){
+    const filtered = getFilteredLogs();
+    selectAllBox.checked = filtered.length>0 && filtered.every(l=>selectedLogIds.has(l.id));
+  }
+}
+
+function toggleSelectAll(checked){
+  const filtered = getFilteredLogs();
+  filtered.forEach(l=>{
+    if(checked) selectedLogIds.add(l.id);
+    else selectedLogIds.delete(l.id);
+  });
+  renderAdmin();
+}
+
+function updateSelectionSummary(){
+  const el = document.getElementById('selectionSummary');
+  if(el) el.textContent = selectedLogIds.size + ' selected';
+}
+
+/* ---- Recycle bin ---- */
 async function deleteLog(evt, id){
   evt.stopPropagation();
-  if(!confirm('Delete this log entry? This cannot be undone.')) return;
+  if(!confirm('Move this log entry to the recycle bin?')) return;
+  const item = allLogs.find(l=>l.id===id);
+  if(!item) return;
   try{
-    await window.storage.delete('log:' + id, true);
+    const trashed = {...item, deletedAt: new Date().toISOString()};
+    await Store.set('trash:' + id, JSON.stringify(trashed), true);
+    await Store.delete('log:' + id, true);
     allLogs = allLogs.filter(l=>l.id!==id);
+    selectedLogIds.delete(id);
+    writeCache(CACHE_KEY_LOGS, allLogs);
     populateMillFilter();
     renderAdmin();
-    showToast('Log entry deleted.');
+    await loadTrash();
+    if(adminSub==='overview') renderCharts();
+    showToast('Log entry moved to recycle bin.');
   }catch(e){
     showToast('Could not delete entry.');
+  }
+}
+
+async function loadTrash(){
+  const cached = readCache(CACHE_KEY_TRASH);
+  if(cached){
+    allTrash = cached;
+    const countEl0 = document.getElementById('trashCount');
+    if(countEl0) countEl0.textContent = cached.length ? `(${cached.length})` : '';
+    if(adminSub==='trash') renderTrash();
+  }
+  try{
+    const listResult = await Store.list('trash:', true);
+    const keys = listResult ? listResult.keys : [];
+    const items = [];
+    for(const k of keys){
+      try{
+        const r = await Store.get(k, true);
+        if(r) items.push(JSON.parse(r.value));
+      }catch(e){}
+    }
+    items.sort((a,b)=>(b.deletedAt||'').localeCompare(a.deletedAt||''));
+    allTrash = items;
+    writeCache(CACHE_KEY_TRASH, items);
+    const countEl = document.getElementById('trashCount');
+    if(countEl) countEl.textContent = items.length ? `(${items.length})` : '';
+    if(adminSub==='trash') renderTrash();
+  }catch(e){
+    console.error(e);
+  }
+}
+
+function renderTrash(){
+  const list = document.getElementById('trashList');
+  if(!list) return;
+  if(!allTrash.length){
+    list.innerHTML = '<div class="empty-state">Recycle bin is empty.</div>';
+    return;
+  }
+  list.innerHTML = allTrash.map(l=>`
+    <div class="trash-card">
+      <div class="trash-left">
+        <span class="badge badge-${periodClass(l.period)}">${periodLabel(l.period)}</span>
+        <span class="mill">${escapeHtml(l.mill)}</span>
+        <span class="trash-meta">${l.recordedDate||'—'} · ${(l.totalDowntime||0).toFixed(1)} hrs down · deleted ${l.deletedAt ? new Date(l.deletedAt).toLocaleString() : '—'}</span>
+      </div>
+      <div class="trash-actions">
+        <button class="restore-btn" onclick="restoreLog('${l.id}')">↺ Restore</button>
+        <button class="purge-btn" onclick="purgeLog('${l.id}')">Delete permanently</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function restoreLog(id){
+  const item = allTrash.find(l=>l.id===id);
+  if(!item) return;
+  const restored = {...item};
+  delete restored.deletedAt;
+  try{
+    await Store.set('log:' + id, JSON.stringify(restored), true);
+    await Store.delete('trash:' + id, true);
+    await loadTrash();
+    await loadLogs();
+    renderTrash();
+    showToast('Log entry restored.');
+  }catch(e){
+    showToast('Could not restore entry.');
+  }
+}
+
+async function purgeLog(id){
+  if(!confirm('Permanently delete this record? This cannot be undone.')) return;
+  try{
+    await Store.delete('trash:' + id, true);
+    allTrash = allTrash.filter(l=>l.id!==id);
+    writeCache(CACHE_KEY_TRASH, allTrash);
+    const countEl = document.getElementById('trashCount');
+    if(countEl) countEl.textContent = allTrash.length ? `(${allTrash.length})` : '';
+    renderTrash();
+    showToast('Record permanently deleted.');
+  }catch(e){
+    showToast('Could not delete record.');
+  }
+}
+
+/* ---- Charts ---- */
+/* ---- Lightweight SVG chart builders (no external library — always renders) ---- */
+function escSvg(str){
+  return escapeHtml(str);
+}
+
+function chartEmptyState(hostId, msg){
+  const host = document.getElementById(hostId);
+  if(host) host.innerHTML = `<div class="chart-empty">${msg||'No data yet'}</div>`;
+}
+
+function svgBarChart(hostId, labels, values, color, opts){
+  const host = document.getElementById(hostId);
+  if(!host) return;
+  if(!labels.length){ chartEmptyState(hostId, 'No data yet — waiting for log entries.'); return; }
+  const horizontal = !!(opts && opts.horizontal);
+  const W = 480, H = 260, padL = horizontal ? 110 : 34, padR = 14, padT = 12, padB = horizontal ? 14 : 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...values);
+  const n = labels.length;
+
+  if(horizontal){
+    const barH = plotH / n * 0.62;
+    const gap = plotH / n;
+    let bars = '';
+    labels.forEach((lab, i)=>{
+      const v = values[i];
+      const w = (v / maxVal) * plotW;
+      const y = padT + i*gap + (gap-barH)/2;
+      bars += `<rect x="${padL}" y="${y.toFixed(1)}" width="${Math.max(w,1).toFixed(1)}" height="${barH.toFixed(1)}" rx="3" fill="${color}"/>`;
+      bars += `<text class="bar-label" x="${padL-8}" y="${(y+barH/2+3.5).toFixed(1)}" text-anchor="end">${escSvg(lab.length>14?lab.slice(0,13)+'…':lab)}</text>`;
+      bars += `<text class="bar-value" x="${(padL+w+6).toFixed(1)}" y="${(y+barH/2+3.5).toFixed(1)}">${v}</text>`;
+    });
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><line class="axis-line" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}"/>${bars}</svg>`;
+  }else{
+    const barW = plotW / n * 0.56;
+    const gap = plotW / n;
+    let bars = '';
+    labels.forEach((lab, i)=>{
+      const v = values[i];
+      const h = (v / maxVal) * plotH;
+      const x = padL + i*gap + (gap-barW)/2;
+      const y = padT + (plotH - h);
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(h,1).toFixed(1)}" rx="3" fill="${color}"/>`;
+      bars += `<text class="bar-value" x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle">${v}</text>`;
+      bars += `<text class="bar-label" x="${(x+barW/2).toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${escSvg(lab.length>10?lab.slice(0,9)+'…':lab)}</text>`;
+    });
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><line class="axis-line" x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/>${bars}</svg>`;
+  }
+}
+
+function svgLineChart(hostId, labels, values, color){
+  const host = document.getElementById(hostId);
+  if(!host) return;
+  if(!labels.length){ chartEmptyState(hostId, 'No data yet — waiting for log entries.'); return; }
+  const W = 900, H = 260, padL = 40, padR = 20, padT = 16, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...values);
+  const n = labels.length;
+  const stepX = n>1 ? plotW/(n-1) : 0;
+  const pts = values.map((v,i)=>{
+    const x = padL + (n>1 ? i*stepX : plotW/2);
+    const y = padT + plotH - (v/maxVal)*plotH;
+    return [x,y];
+  });
+  const linePath = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L${pts[pts.length-1][0].toFixed(1)} ${(padT+plotH).toFixed(1)} L${pts[0][0].toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;
+  const dots = pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="${color}"/>`).join('');
+  const showEvery = Math.max(1, Math.ceil(n/8));
+  const labelEls = labels.map((lab,i)=> i%showEvery===0 ? `<text class="bar-label" x="${pts[i][0].toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${escSvg(lab.slice(5))}</text>` : '').join('');
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <line class="axis-line" x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}"/>
+    <path d="${areaPath}" fill="${color}" opacity="0.12" stroke="none"/>
+    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.2"/>
+    ${dots}${labelEls}
+  </svg>`;
+}
+
+function svgDonutChart(hostId, labels, values, colors){
+  const host = document.getElementById(hostId);
+  if(!host) return;
+  const total = values.reduce((s,v)=>s+v,0);
+  if(!labels.length || total<=0){ chartEmptyState(hostId, 'No data yet — waiting for log entries.'); return; }
+  const size = 200, cx = size/2, cy = size/2, rOuter = 90, rInner = 54;
+  let angle = -Math.PI/2;
+  let slices = '';
+  labels.forEach((lab,i)=>{
+    const frac = values[i]/total;
+    const a0 = angle;
+    const a1 = angle + frac*Math.PI*2;
+    const x0o = cx + rOuter*Math.cos(a0), y0o = cy + rOuter*Math.sin(a0);
+    const x1o = cx + rOuter*Math.cos(a1), y1o = cy + rOuter*Math.sin(a1);
+    const x0i = cx + rInner*Math.cos(a1), y0i = cy + rInner*Math.sin(a1);
+    const x1i = cx + rInner*Math.cos(a0), y1i = cy + rInner*Math.sin(a0);
+    const large = (a1-a0) > Math.PI ? 1 : 0;
+    const d = `M${x0o.toFixed(2)} ${y0o.toFixed(2)} A${rOuter} ${rOuter} 0 ${large} 1 ${x1o.toFixed(2)} ${y1o.toFixed(2)} L${x0i.toFixed(2)} ${y0i.toFixed(2)} A${rInner} ${rInner} 0 ${large} 0 ${x1i.toFixed(2)} ${y1i.toFixed(2)} Z`;
+    slices += `<path d="${d}" fill="${colors[i % colors.length]}"/>`;
+    angle = a1;
+  });
+  const legend = labels.map((lab,i)=>`<span><i style="background:${colors[i % colors.length]}"></i>${escSvg(lab)} (${values[i].toFixed(1)}h)</span>`).join('');
+  host.innerHTML = `<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+    <svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;flex:none;">${slices}</svg>
+    <div class="chart-legend">${legend}</div>
+  </div>`;
+}
+
+function renderCharts(){
+  const byMill = {};
+  allLogs.forEach(l=>{ if(l.mill) byMill[l.mill] = (byMill[l.mill]||0) + (l.totalDowntime||0); });
+  const millLabels = Object.keys(byMill).sort();
+  svgBarChart('chartByMill', millLabels, millLabels.map(m=>+byMill[m].toFixed(1)), '#009D57');
+
+  const byPeriod = {};
+  allLogs.forEach(l=>{ byPeriod[l.period] = (byPeriod[l.period]||0) + (l.totalDowntime||0); });
+  const periodKeys = Object.keys(byPeriod);
+  svgDonutChart('chartByPeriod', periodKeys.map(periodLabel), periodKeys.map(p=>+byPeriod[p].toFixed(1)), ['#1D3A2C','#4E8F6C','#009D57']);
+
+  const byDate = {};
+  allLogs.forEach(l=>{ if(l.recordedDate) byDate[l.recordedDate] = (byDate[l.recordedDate]||0) + (l.totalDowntime||0); });
+  const dateKeys = Object.keys(byDate).sort();
+  svgLineChart('chartTrend', dateKeys, dateKeys.map(d=>+byDate[d].toFixed(1)), '#009D57');
+
+  const byReason = {};
+  allLogs.forEach(l=>(l.stops||[]).forEach(s=>{
+    const r = (s.reason||'').trim();
+    if(!r) return;
+    byReason[r] = (byReason[r]||0) + 1;
+  }));
+  const topReasons = Object.entries(byReason).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  svgBarChart('chartReasons', topReasons.map(r=>r[0]), topReasons.map(r=>r[1]), '#2E5B47', { horizontal:true });
+
+  const byShift = {};
+  allLogs.forEach(l=>{ const sh = l.shift || 'Unspecified'; byShift[sh] = (byShift[sh]||0) + 1; });
+  const shiftKeys = Object.keys(byShift);
+  svgBarChart('chartShift', shiftKeys, shiftKeys.map(s=>byShift[s]), '#009D57');
+}
+
+/* ---- Export selected/filtered records ---- */
+function buildExportRows(records){
+  const rows = [];
+  records.forEach(l=>{
+    if(l.stops && l.stops.length){
+      l.stops.forEach(s=>{
+        rows.push({
+          Mill: l.mill, Period: periodLabel(l.period), Shift: l.shift, Date: l.recordedDate,
+          Supervisor: l.supervisor, 'Total Downtime (hrs)': l.totalDowntime,
+          'Stop Time': s.timeStopped, 'Start Time': s.timeStarted, 'Stop Duration (hrs)': s.dtime,
+          Reason: s.reason, 'Action Taken': s.action
+        });
+      });
+    }else{
+      rows.push({
+        Mill: l.mill, Period: periodLabel(l.period), Shift: l.shift, Date: l.recordedDate,
+        Supervisor: l.supervisor, 'Total Downtime (hrs)': l.totalDowntime,
+        'Stop Time':'', 'Start Time':'', 'Stop Duration (hrs)':'', Reason:'No stoppages recorded', 'Action Taken':''
+      });
+    }
+  });
+  return rows;
+}
+
+function exportRecords(type){
+  const filtered = getFilteredLogs();
+  const records = selectedLogIds.size>0 ? filtered.filter(l=>selectedLogIds.has(l.id)) : filtered;
+  if(records.length===0){
+    showToast('No records to export.');
+    return;
+  }
+
+  if(type==='excel'){
+    if(typeof XLSX === 'undefined'){ showToast('Excel export library did not load.'); return; }
+    const rows = buildExportRows(records);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mill Log');
+    XLSX.writeFile(wb, `GHACEM-mill-log-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast(`Exported ${records.length} record(s) to Excel.`);
+  }else{
+    if(typeof window.jspdf === 'undefined'){ showToast('PDF export library did not load.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape' });
+    doc.setFontSize(14);
+    doc.text('GHACEM — Milling Department Daily Log', 14, 14);
+    doc.setFontSize(9);
+    doc.setTextColor(90);
+    doc.text(`Exported ${new Date().toLocaleString()}  ·  ${records.length} record(s)`, 14, 20);
+    doc.setTextColor(0);
+    let y = 28;
+    records.forEach(l=>{
+      if(y > 175){ doc.addPage(); y = 16; }
+      doc.setFontSize(10);
+      doc.setFont(undefined,'bold');
+      doc.text(`${l.mill}  |  ${periodLabel(l.period)}  |  ${l.recordedDate||'—'}  |  Shift ${l.shift||'—'}  |  Supervisor: ${l.supervisor||'—'}  |  Downtime: ${(l.totalDowntime||0).toFixed(1)} hrs`, 14, y);
+      doc.setFont(undefined,'normal');
+      y += 4;
+      const body = (l.stops && l.stops.length)
+        ? l.stops.map(s=>[s.timeStopped||'—', s.timeStarted||'—', s.dtime.toFixed(1), s.reason||'—', s.action||'—'])
+        : [['—','—','—','No stoppages recorded','—']];
+      doc.autoTable({
+        startY: y,
+        head: [['Stopped','Started','Hrs','Reason','Action taken']],
+        body,
+        styles:{ fontSize:8 },
+        headStyles:{ fillColor:[0,157,87] },
+        margin:{ left:14, right:14 }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    });
+    doc.save(`GHACEM-mill-log-${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast(`Exported ${records.length} record(s) to PDF.`);
   }
 }
 
@@ -593,8 +1249,23 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
+async function detectStorageMode(){
+  try{
+    await Store.list('log:', true);
+  }catch(e){ /* ignore, storageMode stays whatever Store resolved */ }
+  const badgeHost = document.querySelector('.brand-text');
+  if(storageMode === 'local' && badgeHost && !document.getElementById('storageModeBadge')){
+    const badge = document.createElement('p');
+    badge.id = 'storageModeBadge';
+    badge.style.cssText = 'margin:4px 0 0;font-size:10.5px;color:var(--danger);font-family:\'IBM Plex Mono\',monospace;letter-spacing:.02em;';
+    badge.textContent = '● Local device storage only — not shared across users';
+    badgeHost.appendChild(badge);
+  }
+}
+
 document.getElementById('recordedDate').valueAsDate = new Date();
 addStopRow();
+detectStorageMode();
 </script>
 </body>
 </html>
